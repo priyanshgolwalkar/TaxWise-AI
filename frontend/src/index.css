@@ -1,0 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+:root { font-family: 'DM Sans', sans-serif; color: #172033; background: #f6f8fc; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, input, textarea { font: inherit; }
+button, a { transition: color .2s ease, background-color .2s ease, border-color .2s ease, box-shadow .2s ease, transform .2s ease; }
+.fade-in { animation: fade .45s ease both; }
+.surface { border: 1px solid #e6eaf2; background: #fff; box-shadow: 0 12px 30px rgba(31, 48, 86, .055); }
+.soft-grid { background-image: linear-gradient(rgba(99, 102, 241, .045) 1px, transparent 1px), linear-gradient(90deg, rgba(99, 102, 241, .045) 1px, transparent 1px); background-size: 32px 32px; }
+.skeleton { animation: pulse 1.5s ease-in-out infinite; background: #e8edf5; }
+@keyframes pulse { 50% { opacity: .45; } }
+@keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }

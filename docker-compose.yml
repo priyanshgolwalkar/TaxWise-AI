@@ -1,0 +1,35 @@
+services:
+  frontend:
+    build: ./frontend
+    ports: ['5173:80']
+    depends_on: [backend]
+  backend:
+    build: ./backend
+    ports: ['8000:8000']
+    env_file: .env
+    depends_on: [db, minio, ollama]
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE:?Set MYSQL_DATABASE in .env}
+      MYSQL_USER: ${MYSQL_USER:?Set MYSQL_USER in .env}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?Set MYSQL_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+    ports: ['3306:3306']
+    volumes: [mysql_data:/var/lib/mysql]
+  minio:
+    image: minio/minio
+    command: server /data --console-address ':9001'
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:?Set MINIO_ACCESS_KEY in .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:?Set MINIO_SECRET_KEY in .env}
+    ports: ['9000:9000','9001:9001']
+    volumes: [minio_data:/data]
+  ollama:
+    image: ollama/ollama
+    ports: ['11434:11434']
+    volumes: [ollama_data:/root/.ollama]
+volumes:
+  mysql_data:
+  minio_data:
+  ollama_data:

@@ -1,0 +1,42 @@
+# Environment files and local secrets
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Python environments and generated files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+ENV/
+
+# Node dependencies and generated files
+node_modules/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+.coverage
+
+# Local databases and uploaded documents
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+*.sqlite-*
+uploads/
+
+# Local editor and operating-system files
+.vscode/
+*.log
+.DS_Store
+Thumbs.db
