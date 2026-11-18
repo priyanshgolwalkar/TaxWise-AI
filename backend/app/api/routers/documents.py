@@ -1,5 +1,5 @@
 from pathlib import Path
-from tempfile import NamedTemporaryFile
+from tempfile import TemporaryDirectory
 from typing import Annotated
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException, status
 from sqlalchemy.orm import Session
@@ -8,8 +8,8 @@ from app.db.session import get_db
 from app.models.document import Document, ExtractedFinancialData
 from app.models.user import User
 from app.schemas.documents import DocumentResponse
-from app.services.document_processing import extract_fields
-from app.services.storage import storage
+from app.services.document_processing import DocumentProcessingUnavailable, extract_fields
+from app.services.storage import DocumentStorageError, storage
 
 router = APIRouter(prefix='/documents', tags=['documents'])
 
@@ -27,17 +27,32 @@ async def upload_document(file: Annotated[UploadFile, File(...)], db: Session = 
     document = Document(user_id=user.id, filename=file.filename or 'document', content_type=file.content_type, size_bytes=len(content), storage_key='pending', status='processing')
     db.add(document); db.flush()
     try:
+        with TemporaryDirectory() as temporary_directory:
+            path = Path(temporary_directory) / f'upload{suffix}'
+            path.write_bytes(content)
+            extracted = extract_fields(str(path))
+    except DocumentProcessingUnavailable as exc:
+        db.rollback()
+        raise HTTPException(503, str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
+        db.rollback()
+        raise HTTPException(422, str(exc)) from exc
+    except OSError as exc:
+        db.rollback()
+        raise HTTPException(503, 'Document processing storage is unavailable.') from exc
+
+    try:
         document.storage_key = storage.save(content, document.filename, document.content_type)
-        with NamedTemporaryFile(delete=False, suffix=suffix) as temp:
-            temp.write(content); path = temp.name
-        extracted = extract_fields(path)
         document.status = 'needs_review' if extracted['requires_user_verification'] else 'processed'
         db.add(ExtractedFinancialData(document_id=document.id, normalized_data=extracted['fields'], raw_text=extracted['raw_text'], missing_fields=extracted['missing_fields'], validation_errors=extracted['validation_errors'], requires_user_verification=extracted['requires_user_verification']))
         db.commit(); db.refresh(document)
         return {'id': document.id, 'filename': document.filename, 'content_type': document.content_type, 'size_bytes': document.size_bytes, 'status': document.status, 'storage_key': document.storage_key, 'created_at': document.created_at, 'extracted_data': extracted}
-    except (ValueError, RuntimeError) as exc:
+    except DocumentStorageError as exc:
         db.rollback()
-        raise HTTPException(422, str(exc)) from exc
+        raise HTTPException(503, str(exc)) from exc
+    except OSError as exc:
+        db.rollback()
+        raise HTTPException(503, 'Document storage is unavailable.') from exc
 
 @router.get('', response_model=list[DocumentResponse])
 def list_documents(db: Session = Depends(get_db), user: User = Depends(get_current_user)):

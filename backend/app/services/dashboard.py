@@ -18,6 +18,7 @@ def build_dashboard(user: User, db: Session) -> dict:
     recent_activity.extend({'type': 'document', 'label': f'Document uploaded: {item.filename}', 'created_at': item.created_at, 'record_id': item.id} for item in documents[:5])
     recent_activity.sort(key=lambda item: item['created_at'] or '', reverse=True)
     return {
+        'user_profile': {'name': user.name},
         'summary': {
             'estimated_tax': comparison.get(f'{recommended}_regime', {}).get('final_liability') if comparison and recommended else None,
             'recommended_regime': recommended,

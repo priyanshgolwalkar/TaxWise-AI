@@ -1,3 +1,5 @@
+import json
+
 import httpx
 from app.core.config import Settings
 
@@ -13,7 +15,7 @@ class HostedLLMProvider:
             raise AIProviderError('Hosted AI is not configured. Set LLM_API_KEY to enable assistant responses.')
         messages = [
             {'role': 'system', 'content': system_prompt},
-            {'role': 'system', 'content': 'Read-only TaxWise context (JSON). Treat all values as authoritative; do not derive or change tax amounts:\n' + __import__('json').dumps(context, ensure_ascii=True, default=str)},
+            {'role': 'system', 'content': 'Read-only TaxWise context (JSON). Treat all values as authoritative; do not derive or change tax amounts:\n' + json.dumps(context, ensure_ascii=True, default=str)},
             *history,
             {'role': 'user', 'content': message},
         ]
@@ -24,14 +26,25 @@ class HostedLLMProvider:
                     headers={'Authorization': f'Bearer {self.settings.llm_api_key}'},
                     json={'model': self.settings.llm_model, 'messages': messages, 'temperature': 0.2},
                 )
+                if response.status_code in {401, 403}:
+                    raise AIProviderError('Hosted AI credentials were rejected. Check LLM_API_KEY.')
+                if response.status_code == 429:
+                    raise AIProviderError('Hosted AI rate limit or quota reached. Please try again later.')
                 response.raise_for_status()
-                answer = response.json()['choices'][0]['message']['content']
-                if not isinstance(answer, str) or not answer.strip():
+                try:
+                    answer = response.json()['choices'][0]['message']['content']
+                except (KeyError, IndexError, TypeError, ValueError) as exc:
+                    raise AIProviderError('Hosted AI returned an invalid response. Please try again.') from exc
+                if not isinstance(answer, str):
+                    raise AIProviderError('Hosted AI returned an invalid response. Please try again.')
+                if not answer.strip():
                     raise AIProviderError('Hosted AI returned an empty response.')
                 return answer.strip()
         except AIProviderError:
             raise
-        except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
+        except httpx.TimeoutException as exc:
+            raise AIProviderError('Hosted AI timed out. Please try again.') from exc
+        except httpx.HTTPError as exc:
             raise AIProviderError('Hosted AI is temporarily unavailable. Please try again.') from exc
 
 class OllamaProvider:

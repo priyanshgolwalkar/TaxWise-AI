@@ -2,6 +2,7 @@ from uuid import uuid4
 from fastapi.testclient import TestClient
 from app.main import app
 from app.db.session import SessionLocal
+from app.models.planning import RecommendationRecord
 from app.models.user import User
 
 PAYLOAD = {'assessment_year': '2025-26', 'annual_income': 1850000, 'standard_deduction': 75000, 'deductions_80c': 100000, 'deductions_80d': 25000, 'home_loan_interest': 0, 'hra_exemption': 0}
@@ -54,7 +55,12 @@ def test_recommendation_api_is_authenticated_and_user_scoped():
         assert created.json()['items'][0]['applicable_regime'] == 'old'
         assert created.json()['items'][0]['explanation']
         assert created.json()['items'][0]['impact'] >= 0
+        repeated = client.post('/api/v1/recommendations/', headers=first_headers, json={**PAYLOAD, 'regime': 'old'})
+        assert repeated.json() == created.json()
         assert client.get('/api/v1/recommendations/latest', headers=second_headers).json() is None
+        with SessionLocal() as db:
+            owner = db.query(User).filter(User.email == first_email).first()
+            assert db.query(RecommendationRecord).filter(RecommendationRecord.user_id == owner.id).count() == 1
     cleanup([first_email, second_email])
 
 

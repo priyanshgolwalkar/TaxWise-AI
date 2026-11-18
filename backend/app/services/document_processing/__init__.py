@@ -1,1 +1,1 @@
-from .pipeline import extract_fields
+from .pipeline import DocumentProcessingUnavailable, extract_fields

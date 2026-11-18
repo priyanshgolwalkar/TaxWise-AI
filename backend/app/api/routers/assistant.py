@@ -37,8 +37,8 @@ async def chat(payload: AssistantRequest, db: Session = Depends(get_db), user: U
 	else:
 		conversation = Conversation(user_id=user.id)
 		db.add(conversation); db.flush()
-	history_rows = db.query(Message).filter(Message.conversation_id == conversation.id).order_by(Message.created_at.asc()).limit(20).all()
-	history = [{'role': row.role, 'content': row.content} for row in history_rows]
+	history_rows = db.query(Message).filter(Message.conversation_id == conversation.id).order_by(Message.created_at.desc(), Message.id.desc()).limit(20).all()
+	history = [{'role': row.role, 'content': row.content} for row in reversed(history_rows)]
 	db.add(Message(conversation_id=conversation.id, role='user', content=payload.message))
 	db.commit()
 	try:

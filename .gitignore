@@ -34,6 +34,8 @@ coverage/
 *.sqlite3
 *.sqlite-*
 uploads/
+*.tmp
+*.temp
 
 # Local editor and operating-system files
 .vscode/
