@@ -14,13 +14,15 @@ TaxWise AI is a university PBL project for intelligent, explainable tax planning
 
 ## Local development
 
-1. Copy `.env.example` to `.env`, replace every `replace-with-*` value with a unique secret, and keep `.env` local. Set `DATABASE_URL` to use the same password as `MYSQL_PASSWORD`. Without `JWT_SECRET`, the backend generates an ephemeral development key; configure a stable secret for deployments so tokens remain valid across restarts.
+1. Copy `.env.example` to `.env`, replace every `replace-with-*` value with a unique secret, and keep `.env` local. Set `DATABASE_URL` to use the same password as `MYSQL_PASSWORD`. Set `ENVIRONMENT=production`, a strong stable `JWT_SECRET`, and `CORS_ORIGINS` to a comma-separated list containing the deployed frontend origin for production. Local development defaults to `http://localhost:5173`; production startup fails if `JWT_SECRET` is missing or still a placeholder.
 2. Backend: `cd backend`, create a virtual environment, install `pip install -r requirements.txt`, then run `uvicorn app.main:app --reload`.
 3. Frontend: `cd frontend`, run `npm install`, then `npm run dev`.
 4. Open `http://localhost:5173`. API documentation is at `http://localhost:8000/docs`.
 5. Run backend tests with `pytest backend/tests` from the repository root.
 
 `DATABASE_URL` defaults to SQLite for quick tests and can be set to the MySQL URL from `.env` for the full stack. Docker Compose requires the database and MinIO credentials in `.env`; no default credentials are committed. Vercel can deploy `frontend/`; Render can deploy `backend/` with the Dockerfile. Before production, connect persistence-backed user authentication, MinIO uploads, Ollama/RAG retrieval, and replace the example tax rules with the project team's approved source of truth.
+
+For TiDB Cloud, set `DATABASE_URL` to a `mysql+pymysql://...` connection URL and `TIDB_CA_PATH` to the downloaded TiDB CA certificate file. MySQL/PyMySQL connections require that CA file and always enable certificate-chain and hostname verification; startup fails with a configuration error if the CA path is missing or invalid. SQLite configuration and behavior are unchanged.
 
 The document endpoints require a bearer token: `POST /api/v1/documents/upload` accepts PDF/PNG/JPEG files up to 10 MB, and `GET /api/v1/documents` returns only the authenticated user's documents. Tax comparison is available at `POST /api/v1/tax/compare` and requires the same token.
 
